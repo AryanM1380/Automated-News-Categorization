@@ -1,3 +1,4 @@
+import sys
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
@@ -8,297 +9,382 @@ from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 import re
 from sklearn.metrics import accuracy_score
-import tkinter as tk
-from tkinter import ttk, scrolledtext, messagebox, font
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
+                            QTextEdit, QPushButton, QLabel, QProgressBar, QDialog, QMessageBox)
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject
+from PyQt6.QtGui import QFont
 import threading
 import os
+from PyQt6.QtGui import QFont, QTextOption
+# Create a signal class for thread communication
+class ModelSignals(QObject):
+    accuracy_ready = pyqtSignal(float)
+    error_occurred = pyqtSignal(str)
+    model_loaded = pyqtSignal()
 
-class CyberpunkTheme:
-    """Cyberpunk color theme and style definitions"""
-    # Main colors
-    BG_DARK = "#0a0a12"
-    BG_MEDIUM = "#13132a"
-    BG_LIGHT = "#1a1a3a"
-    
-    # Accent colors
-    NEON_BLUE = "#00f2ff"
-    NEON_PINK = "#ff00f2"
-    NEON_PURPLE = "#9000ff"
-    NEON_GREEN = "#00ff9f"
-    NEON_YELLOW = "#ffee00"
-    
-    # Text colors
-    TEXT_PRIMARY = "#ffffff"
-    TEXT_SECONDARY = "#aaaadd"
-    
-    # Font definitions
-    FONT_MAIN = "Courier New"
-    FONT_HEADER = "Arial Black"
+class ModernTheme:
+    """Modern color theme and style definitions with softer accents"""
+    BG_WHITE = "#ffffff"
+    BG_LIGHT_GRAY = "#f5f5f5"
+    BG_GRAY = "#e0e0e0"
+    ACCENT_SOFT_BLUE = "#4a90e2"  # Softer blue for a more subdued look
+    TEXT_GRAY = "#666666"
+    TEXT_DARK = "#333333"
 
-class NewsCategoryPredictor:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("CYBERPREDICTOR v1.0")
-        self.root.geometry("900x700")
-        self.root.configure(bg=CyberpunkTheme.BG_DARK)
+class WarningDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Warning")
+        self.setFixedSize(400, 200)
+        self.setStyleSheet(f"background-color: {ModernTheme.BG_WHITE};")
+
+        # Layout for the dialog
+        layout = QVBoxLayout()
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(20)
+
+        # Warning message
+        self.warning_label = QLabel("Please enter text to analyze.")
+        self.warning_label.setFont(QFont("Arial", 14, QFont.Weight.Bold))
+        self.warning_label.setStyleSheet(f"color: {ModernTheme.ACCENT_SOFT_BLUE};")
+        self.warning_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.warning_label)
+
+        # OK button
+        self.ok_button = QPushButton("OK")
+        self.ok_button.setFont(QFont("Arial", 12))
+        self.ok_button.setStyleSheet(f"""
+            background-color: {ModernTheme.BG_GRAY};
+            color: {ModernTheme.TEXT_DARK};
+            border: 1px solid {ModernTheme.BG_GRAY};
+            padding: 10px;
+            min-width: 100px;
+        """)
+        self.ok_button.clicked.connect(self.accept)
+        layout.addWidget(self.ok_button, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        self.setLayout(layout)
+
+class AboutMeDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("About Me")
+        self.setFixedSize(500, 300)
+        self.setStyleSheet(f"background-color: {ModernTheme.BG_WHITE};")
+
+        # Layout for the dialog
+        layout = QVBoxLayout()
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(20)
+
+        # About Me information
+        self.about_label = QLabel("""My name is Aryan Mohammadi, an NLP and Machine Learning developer and a Computer Applications student at HAMK University in Finland. I specialize in AI, Natural Language Processing (NLP), and backend development, working with technologies like Python, Node.js, and React.js. This project is part of my thesis, titled "Automated News Categorization Using Small Language Models, NLP, and Pre-Trained Models." It focuses on leveraging NLP techniques and Small Language models to efficiently categorize news articles, providing a scalable and accurate solution for news analysis and classification.""")
+        self.about_label.setFont(QFont("Arial", 12))
+        self.about_label.setStyleSheet(f"""
+            color: {ModernTheme.TEXT_DARK};
+            text-align: justify;  
+            qproperty-alignment: AlignLeft;  
+        """)
+        self.about_label.setAlignment(Qt.AlignmentFlag.AlignJustify | Qt.AlignmentFlag.AlignLeft)  
+        self.about_label.setWordWrap(True)
+        layout.addWidget(self.about_label)
+
+        # Return button
+        self.return_button = QPushButton("Return to Main Page")
+        self.return_button.setFont(QFont("Arial", 12))
+        self.return_button.setStyleSheet(f"""
+            background-color: {ModernTheme.BG_GRAY};
+            color: {ModernTheme.TEXT_DARK};
+            border: 1px solid {ModernTheme.BG_GRAY};
+            padding: 10px;
+            min-width: 150px;
+        """)
+        self.return_button.clicked.connect(self.accept)
+        layout.addWidget(self.return_button, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        self.setLayout(layout)
+
+class NewsCategoryPredictor(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Predict")
+        self.setGeometry(100, 100, 900, 700)
+        self.setStyleSheet(f"background-color: {ModernTheme.BG_WHITE};")
         
-        # Custom fonts
-        self.custom_font = font.Font(family=CyberpunkTheme.FONT_MAIN, size=10)
-        self.header_font = font.Font(family=CyberpunkTheme.FONT_HEADER, size=16, weight="bold")
-        self.subheader_font = font.Font(family=CyberpunkTheme.FONT_MAIN, size=12, weight="bold")
-        self.result_font = font.Font(family=CyberpunkTheme.FONT_MAIN, size=14, weight="bold")
+        # Setup signals for thread communication
+        self.signals = ModelSignals()
+        self.signals.accuracy_ready.connect(self.update_accuracy_display)
+        self.signals.error_occurred.connect(self.show_error)
+        self.signals.model_loaded.connect(self.enable_predict_button)
+
+        # Central widget and layout
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        self.layout = QVBoxLayout(central_widget)
+        self.layout.setContentsMargins(20, 20, 20, 20)
+        self.layout.setSpacing(20)
+
+        # Header with About Me button
+        self.header_frame = QWidget()
+        header_layout = QHBoxLayout(self.header_frame)
+
+        self.header_label = QLabel("Predict")
+        self.header_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.header_label.setFont(QFont("Arial", 16, QFont.Weight.Bold))
+        self.header_label.setStyleSheet(f"color: {ModernTheme.TEXT_DARK};")
+        header_layout.addWidget(self.header_label)
+
+        # About Me button (top right)
+        self.about_button = QPushButton("About Me")
+        self.about_button.setFont(QFont("Arial", 12))
+        self.about_button.setStyleSheet(f"""
+            background-color: {ModernTheme.BG_GRAY};
+            color: {ModernTheme.TEXT_DARK};
+            border: 1px solid {ModernTheme.BG_GRAY};
+            padding: 5px 15px;
+        """)
+        self.about_button.clicked.connect(self.show_about)
+        header_layout.addStretch()  # Push the About Me button to the right
+        header_layout.addWidget(self.about_button)
+
+        self.layout.addWidget(self.header_frame)
+
+        # Input section
+        self.input_frame = QWidget()
+        input_layout = QVBoxLayout(self.input_frame)
+
+        self.input_label = QLabel("Enter News Content")
+        self.input_label.setFont(QFont("Arial", 12))
+        self.input_label.setStyleSheet(f"color: {ModernTheme.TEXT_GRAY};")
+        input_layout.addWidget(self.input_label)
+
+        self.text_input = QTextEdit()
+        self.text_input.setFont(QFont("Arial", 13))  # Slightly larger font for readability
+        self.text_input.setMinimumHeight(250)  # Set a minimum height to show more text
+        self.text_input.setAcceptRichText(False)  # Plain text only for simplicity
+        self.text_input.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)  # Enable word wrapping
+        self.text_input.setWordWrapMode(QTextOption.WrapMode.WordWrap)  # Ensure proper wrapping
+        self.text_input.setPlaceholderText("Paste your news article here...")
+        self.text_input.setStyleSheet(f"""
+            background-color: {ModernTheme.BG_WHITE};
+            color: {ModernTheme.TEXT_DARK};
+            border: 1px solid {ModernTheme.BG_GRAY};
+            border-radius: 5px;  /* Softer corners */
+            padding: 15px;       /* More padding for comfort */
+        """)
+        input_layout.addWidget(self.text_input)
+
+        self.layout.addWidget(self.input_frame, stretch=1)  # Add stretch to give more space to input
+        self.text_input.setPlaceholderText("Paste your news article here...")
+        input_layout.addWidget(self.text_input)
+
+        self.layout.addWidget(self.input_frame)
+
+        # Button frame for Predict, Restart, and Exit
+        self.button_frame = QWidget()
+        button_layout = QHBoxLayout(self.button_frame)
+        button_layout.setSpacing(10)
+
+        # Predict button
+        self.predict_button = QPushButton("Predict")
+        self.predict_button.setFont(QFont("Arial", 12))
+        self.predict_button.setStyleSheet(f"""
+            background-color: {ModernTheme.BG_GRAY};
+            color: {ModernTheme.TEXT_DARK};
+            border: 1px solid {ModernTheme.BG_GRAY};
+            padding: 10px;
+            min-width: 100px;
+        """)
+        self.predict_button.clicked.connect(self.predict)
+        self.predict_button.setEnabled(False)  # Disabled until model is loaded
+        button_layout.addWidget(self.predict_button)
+
+        # Restart button
+        self.restart_button = QPushButton("Restart")
+        self.restart_button.setFont(QFont("Arial", 12))
+        self.restart_button.setStyleSheet(f"""
+            background-color: {ModernTheme.BG_GRAY};
+            color: {ModernTheme.TEXT_DARK};
+            border: 1px solid {ModernTheme.BG_GRAY};
+            padding: 10px;
+            min-width: 100px;
+        """)
+        self.restart_button.clicked.connect(self.restart)
+        button_layout.addWidget(self.restart_button)
+
+        # Exit button
+        self.exit_button = QPushButton("Exit")
+        self.exit_button.setFont(QFont("Arial", 12))
+        self.exit_button.setStyleSheet(f"""
+            background-color: {ModernTheme.BG_GRAY};
+            color: {ModernTheme.TEXT_DARK};
+            border: 1px solid {ModernTheme.BG_GRAY};
+            padding: 10px;
+            min-width: 100px;
+        """)
+        self.exit_button.clicked.connect(self.close)  # Close the application
+        button_layout.addWidget(self.exit_button)
+
+        self.layout.addWidget(self.button_frame, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        # Progress bar with accuracy label
+        self.accuracy_frame = QWidget()
+        accuracy_layout = QHBoxLayout(self.accuracy_frame)
+        accuracy_layout.setContentsMargins(0, 0, 0, 0)
         
-        # Configure styles
-        self.configure_styles()
+        # Label for "Prediction Accuracy"
+        self.accuracy_title_label = QLabel("Prediction Accuracy:")
+        self.accuracy_title_label.setFont(QFont("Arial", 12))
+        self.accuracy_title_label.setStyleSheet(f"color: {ModernTheme.TEXT_GRAY};")
+        accuracy_layout.addWidget(self.accuracy_title_label)
         
-        # Create the UI
-        self.create_ui()
+        # Progress bar
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setValue(0)  # Initialize to 0
+        self.progress_bar.setTextVisible(False)  # Hide the percentage text
+        self.progress_bar.setStyleSheet(f"""
+            QProgressBar {{
+                background-color: {ModernTheme.BG_LIGHT_GRAY};
+                border: 1px solid {ModernTheme.BG_GRAY};
+                border-radius: 5px;
+                height: 8px;
+                min-width: 200px;
+            }}
+            QProgressBar::chunk {{
+                background-color: {ModernTheme.ACCENT_SOFT_BLUE};
+                border-radius: 5px;
+            }}
+        """)
+        accuracy_layout.addWidget(self.progress_bar)
         
+        # Accuracy percentage label
+        self.accuracy_value_label = QLabel("Loading model...")
+        self.accuracy_value_label.setFont(QFont("Arial", 12, QFont.Weight.Bold))
+        self.accuracy_value_label.setStyleSheet(f"color: {ModernTheme.ACCENT_SOFT_BLUE}; min-width: 80px;")
+        accuracy_layout.addWidget(self.accuracy_value_label)
+        
+        self.layout.addWidget(self.accuracy_frame)
+
+        # Results section
+        self.result_frame = QWidget()
+        result_layout = QVBoxLayout(self.result_frame)
+        self.result_label = QLabel("Classification Result")
+        self.result_label.setFont(QFont("Arial", 12))
+        self.result_label.setStyleSheet(f"color: {ModernTheme.TEXT_GRAY};")
+        result_layout.addWidget(self.result_label)
+
+        self.category_result = QLabel("")
+        self.category_result.setFont(QFont("Arial", 14, QFont.Weight.Bold))
+        self.category_result.setStyleSheet(f"color: {ModernTheme.ACCENT_SOFT_BLUE};")
+        self.category_result.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        result_layout.addWidget(self.category_result)
+
+        self.layout.addWidget(self.result_frame)
+
+        # Footer
+        self.footer_label = QLabel("""
+            This AI model classifies news articles into different categories with high accuracy.  
+            Simply paste your article and click "Predict" to see the results.  
+            You can see the category results in the following format:
+            - Society  
+            - Sport  
+            - Politics  
+            - Conflict, war, and peace  
+            - Religion and belief  
+            - Science and technology  
+            - Labour  
+            - Health  
+            - Education  
+            - Environment  
+            - Human interest  
+            - Crime, law, and justice  
+            - Disaster, accident, and emergency incident  
+            - Weather  
+            - Economy, business, and finance  
+            - Arts, culture, entertainment, and media  
+            - Lifestyle and leisure  
+        """)
+        self.footer_label.setFont(QFont("Arial", 12))
+        self.footer_label.setStyleSheet(f"""
+            color: {ModernTheme.TEXT_GRAY};
+            qproperty-alignment: AlignLeft;
+        """)
+        self.footer_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.footer_label.setWordWrap(True)
+        self.layout.addWidget(self.footer_label)
+
         # Model state
         self.model = None
         self.vectorizer = None
         self.is_model_loaded = False
-        
+        self.accuracy = 0
+
         # Start loading model in a separate thread
         self.load_model_thread = threading.Thread(target=self.load_model)
         self.load_model_thread.daemon = True
         self.load_model_thread.start()
-        self.progress.start()
-        self.check_model_loaded()
-        
-        # Blinking effect for neon elements
-        self.blink_state = False
-        self.run_blink_effect()
-    
-    def configure_styles(self):
-        """Configure ttk styles for cyberpunk theme"""
-        self.style = ttk.Style()
-        
-        # Configure frame styles
-        self.style.configure("Cyber.TFrame", background=CyberpunkTheme.BG_DARK)
-        self.style.configure("CyberInner.TFrame", background=CyberpunkTheme.BG_MEDIUM)
-        
-        # Configure label styles
-        self.style.configure("Cyber.TLabel", 
-                            background=CyberpunkTheme.BG_DARK, 
-                            foreground=CyberpunkTheme.TEXT_PRIMARY, 
-                            font=self.custom_font)
-        
-        self.style.configure("CyberHeader.TLabel", 
-                            background=CyberpunkTheme.BG_DARK, 
-                            foreground=CyberpunkTheme.NEON_BLUE, 
-                            font=self.header_font)
-        
-        self.style.configure("CyberResult.TLabel", 
-                            background=CyberpunkTheme.BG_MEDIUM, 
-                            foreground=CyberpunkTheme.NEON_YELLOW, 
-                            font=self.result_font)
-        
-        self.style.configure("CyberSubHeader.TLabel", 
-                            background=CyberpunkTheme.BG_MEDIUM, 
-                            foreground=CyberpunkTheme.NEON_GREEN, 
-                            font=self.subheader_font)
-        
-        # Configure button style
-        self.style.configure("Cyber.TButton", 
-                            font=self.subheader_font)
-        
-        self.style.map("Cyber.TButton",
-                      foreground=[('pressed', CyberpunkTheme.BG_DARK), ('active', CyberpunkTheme.TEXT_PRIMARY)],
-                      background=[('pressed', CyberpunkTheme.NEON_GREEN), ('active', CyberpunkTheme.NEON_BLUE)])
-        
-        # Configure progressbar style
-        self.style.configure("Cyber.Horizontal.TProgressbar", 
-                            background=CyberpunkTheme.NEON_PURPLE,
-                            troughcolor=CyberpunkTheme.BG_LIGHT)
-    
-    def create_ui(self):
-        """Create the UI components"""
-        # Main frame
-        self.main_frame = ttk.Frame(self.root, style="Cyber.TFrame", padding=20)
-        self.main_frame.pack(fill=tk.BOTH, expand=True)
-        
-        # Header with animated text effect
-        self.header_frame = ttk.Frame(self.main_frame, style="Cyber.TFrame")
-        self.header_frame.pack(fill=tk.X, pady=(0, 20))
-        
-        self.header_label = ttk.Label(self.header_frame, 
-                                      text="// NEURAL NEWS ANALYZER //", 
-                                      style="CyberHeader.TLabel",
-                                      anchor="center")
-        self.header_label.pack(fill=tk.X)
-        
-        self.subheader_label = ttk.Label(self.header_frame, 
-                                        text="QUANTUM PREDICTION ENGINE", 
-                                        style="Cyber.TLabel",
-                                        foreground=CyberpunkTheme.NEON_PINK,
-                                        font=self.custom_font,
-                                        anchor="center")
-        self.subheader_label.pack(fill=tk.X)
-        
-        # Input section
-        self.input_frame = ttk.Frame(self.main_frame, style="CyberInner.TFrame", padding=15)
-        self.input_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 20))
-        
-        self.input_header = ttk.Label(self.input_frame, 
-                                     text=">> INPUT DATA STREAM", 
-                                     style="CyberSubHeader.TLabel")
-        self.input_header.pack(anchor="w", pady=(0, 10))
-        
-        # Custom text input with cyberpunk styling
-        self.text_input = scrolledtext.ScrolledText(
-            self.input_frame, 
-            wrap=tk.WORD, 
-            height=10,
-            bg=CyberpunkTheme.BG_LIGHT,
-            fg=CyberpunkTheme.TEXT_PRIMARY,
-            insertbackground=CyberpunkTheme.NEON_GREEN,  # Cursor color
-            font=self.custom_font,
-            bd=0,
-            padx=10,
-            pady=10
-        )
-        self.text_input.pack(fill=tk.BOTH, expand=True)
-        
-        # Add placeholder text
-        self.text_input.insert("1.0", "Enter news text here for analysis...")
-        self.text_input.bind("<FocusIn>", self.clear_placeholder)
-        
-        # Progress and status section
-        self.status_frame = ttk.Frame(self.main_frame, style="Cyber.TFrame")
-        self.status_frame.pack(fill=tk.X, pady=(0, 15))
-        
-        self.progress = ttk.Progressbar(self.status_frame, 
-                                       style="Cyber.Horizontal.TProgressbar",
-                                       mode="indeterminate")
-        self.progress.pack(fill=tk.X)
-        
-        self.status_label = ttk.Label(self.status_frame, 
-                                     text="INITIALIZING NEURAL NETWORK...", 
-                                     style="Cyber.TLabel",
-                                     foreground=CyberpunkTheme.NEON_PURPLE)
-        self.status_label.pack(pady=(5, 0))
-        
-        # Control section with glowing button
-        self.control_frame = ttk.Frame(self.main_frame, style="Cyber.TFrame")
-        self.control_frame.pack(fill=tk.X, pady=(0, 20))
-        
-        self.predict_button = ttk.Button(
-            self.control_frame, 
-            text="ANALYZE CONTENT", 
-            style="Cyber.TButton",
-            command=self.predict
-        )
-        self.predict_button.pack(pady=10)
-        
-        # Results section with animated border
-        self.result_container = tk.Frame(self.main_frame, bg=CyberpunkTheme.NEON_BLUE, padx=2, pady=2)
-        self.result_container.pack(fill=tk.BOTH, pady=(0, 10))
-        
-        self.result_frame = ttk.Frame(self.result_container, style="CyberInner.TFrame", padding=15)
-        self.result_frame.pack(fill=tk.BOTH, expand=True)
-        
-        self.result_header = ttk.Label(self.result_frame, 
-                                      text=">> PREDICTION RESULTS", 
-                                      style="CyberSubHeader.TLabel")
-        self.result_header.pack(anchor="w", pady=(0, 15))
-        
-        # Category result with cyberpunk styling
-        self.category_container = ttk.Frame(self.result_frame, style="CyberInner.TFrame")
-        self.category_container.pack(fill=tk.X, pady=(0, 10))
-        
-        self.category_label = ttk.Label(self.category_container, 
-                                       text="CATEGORY:", 
-                                       style="Cyber.TLabel",
-                                       foreground=CyberpunkTheme.NEON_GREEN)
-        self.category_label.pack(side=tk.LEFT, padx=(0, 10))
-        
-        self.category_result = ttk.Label(self.category_container, 
-                                        text="AWAITING INPUT", 
-                                        style="CyberResult.TLabel")
-        self.category_result.pack(side=tk.LEFT)
-        
-        # Footer with cyber styling
-        self.footer_frame = ttk.Frame(self.main_frame, style="Cyber.TFrame")
-        self.footer_frame.pack(fill=tk.X, pady=(10, 0))
-        
-        self.footer_text = ttk.Label(self.footer_frame, 
-                                    text="NEURAL ENGINE v2.0 | CYBERSYSTEMS CORP", 
-                                    style="Cyber.TLabel",
-                                    foreground=CyberpunkTheme.TEXT_SECONDARY,
-                                    anchor="center")
-        self.footer_text.pack(fill=tk.X)
-    
-    def clear_placeholder(self, event):
-        """Clear placeholder text when input is focused"""
-        if self.text_input.get("1.0", "end-1c") == "Enter news text here for analysis...":
-            self.text_input.delete("1.0", tk.END)
-    
-    def run_blink_effect(self):
-        """Create a blinking effect for neon elements"""
-        # Toggle blink state
-        self.blink_state = not self.blink_state
-        
-        # Apply blinking to header
-        if self.blink_state:
-            self.header_label.configure(foreground=CyberpunkTheme.NEON_BLUE)
-            self.result_container.configure(bg=CyberpunkTheme.NEON_BLUE)
-        else:
-            self.header_label.configure(foreground=CyberpunkTheme.NEON_PURPLE)
-            self.result_container.configure(bg=CyberpunkTheme.NEON_PINK)
-        
-        # Schedule next blink
-        self.root.after(1000, self.run_blink_effect)
-    
+
     def load_model(self):
         """Load and train the model in a separate thread"""
         try:
+            # Add print for debugging
+            print("Starting to load model...")
+            
             # NLTK requirements
             self.stop_words = set(stopwords.words('english'))
             self.lemmatizer = WordNetLemmatizer()
-            
+
             # Read dataset
             data = pd.read_csv('MNDS_preprocessed.csv')
-            
+            print(f"Dataset loaded with {len(data)} rows")
+
             # Fill NaN values in 'new_content' with an empty string
             X = data['new_content'].fillna('')
             Y = data['category_level_1']
-            
+
             # Convert text to TF-IDF features
             self.vectorizer = TfidfVectorizer(max_features=5000)
             X_tfidf = self.vectorizer.fit_transform(X)
-            
+            print(f"TF-IDF vectorization complete with {X_tfidf.shape[1]} features")
+
             # Split data into training and testing sets
             X_train, X_test, y_train, y_test = train_test_split(X_tfidf, Y, test_size=0.2, random_state=42)
-            
+            print(f"Data split: training={X_train.shape[0]}, testing={X_test.shape[0]}")
+
             # Train Logistic Regression model
             self.model = LogisticRegression(random_state=42, max_iter=1000)
             self.model.fit(X_train, y_train)
-            
+            print("Model training complete")
+
             # Evaluate model
             y_pred_lr = self.model.predict(X_test)
             lr_accuracy = accuracy_score(y_test, y_pred_lr)
             self.accuracy = lr_accuracy
+            print(f"Model accuracy: {lr_accuracy:.4f}")
+            
+            # Emit signal with accuracy (as percentage)
+            self.signals.accuracy_ready.emit(lr_accuracy * 100)
             
             # Set flag that model is loaded
             self.is_model_loaded = True
+            self.signals.model_loaded.emit()
+            
         except Exception as e:
             print(f"Error loading model: {e}")
-            messagebox.showerror("SYSTEM ERROR", f"NEURAL NETWORK INITIALIZATION FAILED: {e}")
-    
-    def check_model_loaded(self):
-        """Check if the model is loaded and update UI"""
-        if self.is_model_loaded:
-            self.progress.stop()
-            self.progress.pack_forget()
-            self.status_label.config(
-                text=f"NEURAL ENGINE ONLINE | ACCURACY: {self.accuracy:.2%}",
-                foreground=CyberpunkTheme.NEON_GREEN
-            )
-            self.predict_button.state(['!disabled'])
-        else:
-            self.root.after(100, self.check_model_loaded)
-    
+            self.signals.error_occurred.emit(f"Model initialization failed: {e}")
+
+    def enable_predict_button(self):
+        """Enable the predict button once the model is loaded"""
+        self.predict_button.setEnabled(True)
+
+    def update_accuracy_display(self, accuracy_percent):
+        """Update the progress bar and accuracy label with the model's accuracy"""
+        print(f"Updating accuracy display to {accuracy_percent:.1f}%")
+        # Make sure the value is an integer for the progress bar
+        self.progress_bar.setValue(int(accuracy_percent))
+        # Format the accuracy to one decimal place
+        self.accuracy_value_label.setText(f"{accuracy_percent:.1f}%")
+
     def preprocess_text(self, text):
         """Preprocess the input text"""
         if not isinstance(text, str):
@@ -310,68 +396,54 @@ class NewsCategoryPredictor:
         tokens = word_tokenize(text)
         cleaned_tokens = [self.lemmatizer.lemmatize(token) for token in tokens if token not in self.stop_words]
         return ' '.join(cleaned_tokens)
-    
+
     def predict_category(self, text):
         """Predict category for the given text"""
-        # Preprocess the input text
         cleaned_text = self.preprocess_text(text)
-        # Transform using the same TF-IDF vectorizer
         text_tfidf = self.vectorizer.transform([cleaned_text])
-        # Predict category
         prediction = self.model.predict(text_tfidf)[0]
         return prediction
-    
+
     def predict(self):
-        """Handle prediction button click"""
+        """Handle predict button click"""
         if not self.is_model_loaded:
-            messagebox.showwarning("SYSTEM WARNING", "NEURAL ENGINE STILL INITIALIZING. PLEASE WAIT.")
+            self.show_warning("Model is still initializing. Please wait.")
             return
-        
-        # Get text from input
-        text = self.text_input.get("1.0", tk.END).strip()
-        if text == "Enter news text here for analysis...":
+
+        text = self.text_input.toPlainText().strip()
+        if text == "Paste your news article here...":
             text = ""
-            
+
         if not text:
-            messagebox.showwarning("SYSTEM WARNING", "DATA STREAM EMPTY. PLEASE ENTER TEXT TO ANALYZE.")
+            self.show_warning()  # Show custom warning dialog
             return
-        
+
         try:
-            # Set status to processing
-            self.status_label.config(
-                text="PROCESSING DATA STREAM...",
-                foreground=CyberpunkTheme.NEON_PURPLE
-            )
-            self.root.update()
-            
-            # Add typing animation effect
-            self.category_result.config(text="ANALYZING")
-            self.root.update()
-            self.root.after(100)
-            
-            # Get prediction
             pred_category = self.predict_category(text)
-            
-            # Flash effect before showing result
-            for _ in range(3):
-                self.result_container.configure(bg=CyberpunkTheme.NEON_YELLOW)
-                self.root.update()
-                self.root.after(100)
-                self.result_container.configure(bg=CyberpunkTheme.NEON_BLUE)
-                self.root.update()
-                self.root.after(100)
-            
-            # Update result with typing effect
-            self.category_result.config(text=pred_category)
-            
-            # Reset status
-            self.status_label.config(
-                text=f"ANALYSIS COMPLETE | ACCURACY: {self.accuracy:.2%}",
-                foreground=CyberpunkTheme.NEON_GREEN
-            )
+            self.category_result.setText(pred_category)
         except Exception as e:
-            messagebox.showerror("SYSTEM ERROR", f"ANALYSIS FAILED: {e}")
+            self.show_error(f"Prediction failed: {e}")
             print(f"Error during prediction: {e}")
+
+    def restart(self):
+        """Reset the text input and classification result"""
+        self.text_input.clear()
+        self.text_input.setPlaceholderText("Paste your news article here...")
+        self.category_result.setText("")
+
+    def show_warning(self, message=None):
+        """Show a custom warning dialog"""
+        dialog = WarningDialog(self)
+        dialog.exec()
+
+    def show_error(self, message):
+        """Show an error message box"""
+        QMessageBox.critical(self, "Error", message)
+
+    def show_about(self):
+        """Show the About Me dialog"""
+        dialog = AboutMeDialog(self)
+        dialog.exec()
 
 if __name__ == "__main__":
     # Clear console (for Windows)
@@ -379,8 +451,8 @@ if __name__ == "__main__":
         os.system('cls')
     else:
         os.system('clear')
-    
-    # Create main window
-    root = tk.Tk()
-    app = NewsCategoryPredictor(root)
-    root.mainloop()
+
+    app = QApplication(sys.argv)
+    window = NewsCategoryPredictor()
+    window.show()
+    sys.exit(app.exec())
