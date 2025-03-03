@@ -227,42 +227,66 @@ class NewsCategoryPredictor(QMainWindow):
 
         self.layout.addWidget(self.button_frame, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        # Progress bar with accuracy label
+                # Progress bar with accuracy label (combined into a single white box with light curved border)
         self.accuracy_frame = QWidget()
-        accuracy_layout = QHBoxLayout(self.accuracy_frame)
+        accuracy_layout = QVBoxLayout(self.accuracy_frame)
         accuracy_layout.setContentsMargins(0, 0, 0, 0)
-        
-        # Label for "Prediction Accuracy"
-        self.accuracy_title_label = QLabel("Prediction Accuracy:")
+        accuracy_layout.setSpacing(5)  # Reduce spacing for a compact look
+
+        # Style the accuracy frame (white background, light curved border)
+        self.accuracy_frame.setStyleSheet("""
+            background-color: #FFFFFF;  /* White background */
+            border: 1px solid #E0E0E0;  /* Light gray border for a subtle look */
+            border-radius: 8px;         /* Light curved border */
+            padding: 10px;             /* Small padding for spacing */
+        """)
+
+        # "Prediction Accuracy" label at the top, aligned left
+        self.accuracy_title_label = QLabel("Prediction Accuracy")
         self.accuracy_title_label.setFont(QFont("Arial", 12))
-        self.accuracy_title_label.setStyleSheet(f"color: {ModernTheme.TEXT_GRAY};")
+        self.accuracy_title_label.setStyleSheet("""
+            color: #333333;  /* Dark gray text for readability */
+            qproperty-alignment: AlignLeft;  /* Align left as requested */
+        """)
         accuracy_layout.addWidget(self.accuracy_title_label)
-        
-        # Progress bar
+
+        # Horizontal layout for progress bar and percentage (single row in the box)
+        accuracy_row = QWidget()
+        accuracy_row_layout = QHBoxLayout(accuracy_row)
+        accuracy_row_layout.setContentsMargins(0, 0, 0, 0)
+        accuracy_row_layout.setSpacing(10)  # Small spacing between bar and text
+
+        # Progress bar (gray background, black fill, small height)
         self.progress_bar = QProgressBar()
         self.progress_bar.setValue(0)  # Initialize to 0
         self.progress_bar.setTextVisible(False)  # Hide the percentage text
-        self.progress_bar.setStyleSheet(f"""
-            QProgressBar {{
-                background-color: {ModernTheme.BG_LIGHT_GRAY};
-                border: 1px solid {ModernTheme.BG_GRAY};
-                border-radius: 5px;
-                height: 8px;
-                min-width: 200px;
-            }}
-            QProgressBar::chunk {{
-                background-color: {ModernTheme.ACCENT_SOFT_BLUE};
-                border-radius: 5px;
-            }}
+        self.progress_bar.setStyleSheet("""
+            QProgressBar {
+                background-color: #E0E0E0;  /* Gray background for the bar */
+                border: 1px solid #E0E0E0;  /* Gray border to match */
+                border-radius: 3px;         /* Slight rounding for a clean look */
+                height: 8px;               /* Small height for the bar */
+                min-width: 150px;          /* Ensure some minimum width */
+            }
+            QProgressBar::chunk {
+                background-color: #000000;  /* Black fill for the progress */
+                border-radius: 3px;
+            }
         """)
-        accuracy_layout.addWidget(self.progress_bar)
-        
-        # Accuracy percentage label
+        accuracy_row_layout.addWidget(self.progress_bar)
+
+        # Accuracy percentage label (black text, right of the bar)
         self.accuracy_value_label = QLabel("Loading model...")
         self.accuracy_value_label.setFont(QFont("Arial", 12, QFont.Weight.Bold))
-        self.accuracy_value_label.setStyleSheet(f"color: {ModernTheme.ACCENT_SOFT_BLUE}; min-width: 80px;")
-        accuracy_layout.addWidget(self.accuracy_value_label)
-        
+        self.accuracy_value_label.setStyleSheet("""
+            color: #000000;  /* Black text */
+            min-width: 80px;  /* Ensure enough width for the percentage */
+            qproperty-alignment: AlignLeft;  /* Align left for consistency */
+        """)
+        accuracy_row_layout.addWidget(self.accuracy_value_label)
+
+        accuracy_layout.addWidget(accuracy_row)
+
         self.layout.addWidget(self.accuracy_frame)
 
         # Results section
@@ -275,34 +299,24 @@ class NewsCategoryPredictor(QMainWindow):
 
         self.category_result = QLabel("")
         self.category_result.setFont(QFont("Arial", 14, QFont.Weight.Bold))
-        self.category_result.setStyleSheet(f"color: {ModernTheme.ACCENT_SOFT_BLUE};")
+        self.category_result.setStyleSheet(f"""
+            color: #28A745;  /* Green text color, matching the image */
+            background-color: #E6F9E9;  /* Light green background for the oval */
+            border: 1px solid #28A745;  /* Green border to match the text */
+            border-radius: 20px;  /* Create an oval shape with larger radius */
+            padding: 10px 20px;  /* Padding for horizontal and vertical spacing */
+            min-height: 40px;    /* Ensure enough height for the text */
+            min-width: 150px;    /* Ensure enough width for the text */
+            qproperty-alignment: AlignCenter;  /* Center the text */
+        """)
         self.category_result.setAlignment(Qt.AlignmentFlag.AlignCenter)
         result_layout.addWidget(self.category_result)
 
         self.layout.addWidget(self.result_frame)
-
         # Footer
         self.footer_label = QLabel("""
             This AI model classifies news articles into different categories with high accuracy.  
             Simply paste your article and click "Predict" to see the results.  
-            You can see the category results in the following format:
-            - Society  
-            - Sport  
-            - Politics  
-            - Conflict, war, and peace  
-            - Religion and belief  
-            - Science and technology  
-            - Labour  
-            - Health  
-            - Education  
-            - Environment  
-            - Human interest  
-            - Crime, law, and justice  
-            - Disaster, accident, and emergency incident  
-            - Weather  
-            - Economy, business, and finance  
-            - Arts, culture, entertainment, and media  
-            - Lifestyle and leisure  
         """)
         self.footer_label.setFont(QFont("Arial", 12))
         self.footer_label.setStyleSheet(f"""
