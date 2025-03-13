@@ -27,7 +27,7 @@ class ModernTheme:
     BG_WHITE = "#ffffff"
     BG_LIGHT_GRAY = "#f5f5f5"
     BG_GRAY = "#e0e0e0"
-    ACCENT_SOFT_BLUE = "#4a90e2"  # Softer blue for a more subdued look
+    ACCENT_SOFT_BLUE = "#4a90e2"  
     TEXT_GRAY = "#666666"
     TEXT_DARK = "#333333"
 
@@ -134,7 +134,7 @@ class NewsCategoryPredictor(QMainWindow):
         self.header_label.setStyleSheet(f"color: {ModernTheme.TEXT_DARK};")
         header_layout.addWidget(self.header_label)
 
-        # About Me button (top right)
+        # About Me button 
         self.about_button = QPushButton("About Me")
         self.about_button.setFont(QFont("Arial", 12))
         self.about_button.setStyleSheet(f"""
@@ -174,7 +174,7 @@ class NewsCategoryPredictor(QMainWindow):
         """)
         input_layout.addWidget(self.text_input)
 
-        self.layout.addWidget(self.input_frame, stretch=1)  # Add stretch to give more space to input
+        self.layout.addWidget(self.input_frame, stretch=1)  
         self.text_input.setPlaceholderText("Paste your news article here...")
         input_layout.addWidget(self.text_input)
 
@@ -196,7 +196,7 @@ class NewsCategoryPredictor(QMainWindow):
             min-width: 100px;
         """)
         self.predict_button.clicked.connect(self.predict)
-        self.predict_button.setEnabled(False)  # Disabled until model is loaded
+        self.predict_button.setEnabled(False)  
         button_layout.addWidget(self.predict_button)
 
         # Restart button
@@ -227,13 +227,13 @@ class NewsCategoryPredictor(QMainWindow):
 
         self.layout.addWidget(self.button_frame, alignment=Qt.AlignmentFlag.AlignCenter)
 
-                # Progress bar with accuracy label (combined into a single white box with light curved border)
+        # Progress bar with accuracy label 
         self.accuracy_frame = QWidget()
         accuracy_layout = QVBoxLayout(self.accuracy_frame)
         accuracy_layout.setContentsMargins(0, 0, 0, 0)
-        accuracy_layout.setSpacing(5)  # Reduce spacing for a compact look
+        accuracy_layout.setSpacing(5) # Reduce spacing for a compact look
 
-        # Style the accuracy frame (white background, light curved border)
+        # Style the accuracy frame 
         self.accuracy_frame.setStyleSheet("""
             background-color: #FFFFFF;  /* White background */
             border: 1px solid #E0E0E0;  /* Light gray border for a subtle look */
@@ -241,7 +241,7 @@ class NewsCategoryPredictor(QMainWindow):
             padding: 10px;             /* Small padding for spacing */
         """)
 
-        # "Prediction Accuracy" label at the top, aligned left
+
         self.accuracy_title_label = QLabel("Prediction Accuracy")
         self.accuracy_title_label.setFont(QFont("Arial", 12))
         self.accuracy_title_label.setStyleSheet("""
@@ -250,16 +250,16 @@ class NewsCategoryPredictor(QMainWindow):
         """)
         accuracy_layout.addWidget(self.accuracy_title_label)
 
-        # Horizontal layout for progress bar and percentage (single row in the box)
+        # Horizontal layout for progress bar and percentage 
         accuracy_row = QWidget()
         accuracy_row_layout = QHBoxLayout(accuracy_row)
         accuracy_row_layout.setContentsMargins(0, 0, 0, 0)
         accuracy_row_layout.setSpacing(10)  # Small spacing between bar and text
 
-        # Progress bar (gray background, black fill, small height)
+        # Progress bar 
         self.progress_bar = QProgressBar()
-        self.progress_bar.setValue(0)  # Initialize to 0
-        self.progress_bar.setTextVisible(False)  # Hide the percentage text
+        self.progress_bar.setValue(0)  
+        self.progress_bar.setTextVisible(False)  
         self.progress_bar.setStyleSheet("""
             QProgressBar {
                 background-color: #E0E0E0;  /* Gray background for the bar */
@@ -275,7 +275,7 @@ class NewsCategoryPredictor(QMainWindow):
         """)
         accuracy_row_layout.addWidget(self.progress_bar)
 
-        # Accuracy percentage label (black text, right of the bar)
+        # Accuracy percentage label 
         self.accuracy_value_label = QLabel("Loading model...")
         self.accuracy_value_label.setFont(QFont("Arial", 12, QFont.Weight.Bold))
         self.accuracy_value_label.setStyleSheet("""
@@ -429,7 +429,7 @@ class NewsCategoryPredictor(QMainWindow):
             text = ""
 
         if not text:
-            self.show_warning()  # Show custom warning dialog
+            self.show_warning()  
             return
 
         try:
